@@ -1,0 +1,9 @@
+# Local secrets / state
+.env
+*.db
+*.db-shm
+*.db-wal
+
+# Build output
+/attendance-collector
+/bin/
