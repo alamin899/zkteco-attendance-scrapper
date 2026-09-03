@@ -25,9 +25,31 @@ of records — read reliably on high-volume devices).
 
 ## Setup
 
+1. Copy the example configuration:
 ```bash
 cp .env.example .env      # edit device IPs / DB settings
+```
+
+2. Build the application for your target environment:
+
+**For your current OS (default):**
+```bash
 go build -o attendance-collector .
+```
+
+**For Linux Server (x86_64/AMD64):**
+```bash
+GOOS=linux GOARCH=amd64 go build -o attendance-collector-linux .
+```
+
+**For macOS (Apple Silicon / ARM64):**
+```bash
+GOOS=darwin GOARCH=arm64 go build -o attendance-collector-macos-arm .
+```
+
+**For macOS (Intel / x86_64):**
+```bash
+GOOS=darwin GOARCH=amd64 go build -o attendance-collector-macos-intel .
 ```
 
 ## Configuration (`.env`)
