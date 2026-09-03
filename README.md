@@ -119,7 +119,7 @@ docker logs -f attendance-daemon
 For complete step-by-step documentation for both Docker and Native setups, see [RUN_GUIDE.md](file:///Users/test/Documents/practice/attendance-collector/RUN_GUIDE.md).
 For closed-source client delivery and binary installation instructions, see [CLIENT_DELIVERY_GUIDE.md](file:///Users/test/Documents/practice/attendance-collector/CLIENT_DELIVERY_GUIDE.md).
 
-## Running as a service
+## Running as a systemd service (Linux)
 
-Point a systemd unit / launchd plist / Docker container at `attendance-collector run`.
-It logs to stdout and shuts down cleanly on SIGINT/SIGTERM.
+For a complete, step-by-step guide on cross-compiling for Linux and setting up a background `systemd` service for this project, please see the dedicated guide:
+[attendance-collector-linux-running-guide.md](attendance-collector-linux-running-guide.md)

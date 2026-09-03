@@ -1,6 +1,18 @@
 # ZKTeco Attendance Collector — Linux Run & Systemd Setup
 
-This guide shows how to run the `attendance-collector-linux` binary on Linux and configure it as a `systemd` service.
+This guide shows how to compile the binary, run it on Linux, and configure it as a `systemd` service.
+
+## 0. Build for Linux (Cross-Compilation)
+
+If you are developing on a macOS or Windows machine, you need to compile the binary specifically for your Linux server before uploading it.
+
+Run this command in the project directory to create a Linux-compatible executable:
+
+```bash
+GOOS=linux GOARCH=amd64 go build -o attendance-collector-linux .
+```
+
+After building, transfer the `attendance-collector-linux` binary to your Linux server.
 
 ## 1. Project Location
 
