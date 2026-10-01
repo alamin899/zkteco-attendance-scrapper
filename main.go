@@ -47,6 +47,9 @@ func main() {
 	switch cmd {
 	case "pull":
 		runOnce(cfg, args, func(d config.DeviceConfig) error { return col.PullAttendance(d) })
+		if err := col.BackfillLogDirections(); err != nil {
+			fmt.Fprintf(os.Stderr, "direction backfill: %v\n", err)
+		}
 	case "sync-employees":
 		runOnce(cfg, args, func(d config.DeviceConfig) error { return col.SyncEmployees(d) })
 	case "test":
@@ -108,6 +111,10 @@ func runDaemon(cfg *config.Config, col *collector.Collector, _ *gorm.DB) {
 			i+1, d.Name, d.Address(), offset, cfg.PollInterval)
 	}
 	fmt.Println("======================================================================")
+
+	if err := col.BackfillLogDirections(); err != nil {
+		fmt.Fprintf(os.Stderr, "direction backfill: %v\n", err)
+	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()

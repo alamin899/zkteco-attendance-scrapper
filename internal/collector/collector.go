@@ -55,6 +55,11 @@ func (c *Collector) device(dc config.DeviceConfig) (*models.Device, error) {
 	if err != nil {
 		return nil, err
 	}
+	if (dev.Direction == nil || *dev.Direction == "") && dc.Direction != "" {
+		dir := dc.Direction
+		dev.Direction = &dir
+		c.db.Model(&models.Device{}).Where("id = ?", dev.ID).Update("direction", dir)
+	}
 	return &dev, nil
 }
 
@@ -182,6 +187,18 @@ func (c *Collector) storePunches(dev *models.Device, logs []zk.Punch) (int, int,
 		return 0, 0, err
 	}
 
+	// Resolve device direction from DB device or config
+	devDir := dev.Direction
+	if (devDir == nil || *devDir == "") && c.cfg != nil {
+		for _, d := range c.cfg.Devices {
+			if d.IP == dev.IPAddress && d.Port == dev.Port && d.Direction != "" {
+				dir := d.Direction
+				devDir = &dir
+				break
+			}
+		}
+	}
+
 	// 2. Build unique raw logs keyed by dedupe hash
 	rowByHash := map[string]models.AttendanceLog{}
 	for _, l := range logs {
@@ -191,15 +208,18 @@ func (c *Collector) storePunches(dev *models.Device, logs []zk.Punch) (int, int,
 		}
 		empID := empByPin[pin]
 		hash := models.MakeDedupeHash(&dev.ID, pin, l.Time)
+		direction := models.ResolveDirection(devDir, uint8(l.Type))
 		rowByHash[hash] = models.AttendanceLog{
-			DeviceID:   &dev.ID,
-			EmployeeID: &empID,
-			UserPin:    pin,
-			PunchedAt:  l.Time,
-			State:      uint8(l.State),
-			Type:       uint8(l.Type),
-			DedupeHash: hash,
-			CreatedAt:  time.Now(),
+			DeviceID:     &dev.ID,
+			EmployeeID:   &empID,
+			UserPin:      pin,
+			PunchedAt:    l.Time,
+			State:        uint8(l.State),
+			Type:         uint8(l.Type),
+			Direction:    direction,
+			IsReconciled: false,
+			DedupeHash:   hash,
+			CreatedAt:    time.Now(),
 		}
 	}
 
@@ -400,6 +420,36 @@ func (c *Collector) resolveEmployees(pins map[string]struct{}) (map[string]uint,
 		out[pin] = emp.ID
 	}
 	return out, nil
+}
+
+// BackfillLogDirections updates any attendance_logs with direction = 0 based on their device's direction.
+func (c *Collector) BackfillLogDirections() error {
+	if !c.db.Migrator().HasColumn(&models.AttendanceLog{}, "direction") {
+		return nil
+	}
+	// For "in" devices
+	if err := c.db.Exec(`
+		UPDATE attendance_logs
+		SET direction = ?
+		WHERE direction = ? AND device_id IN (
+			SELECT id FROM devices WHERE LOWER(direction) = 'in'
+		)
+	`, models.DirectionIn, models.DirectionUnknown).Error; err != nil {
+		return err
+	}
+
+	// For "out" devices
+	if err := c.db.Exec(`
+		UPDATE attendance_logs
+		SET direction = ?
+		WHERE direction = ? AND device_id IN (
+			SELECT id FROM devices WHERE LOWER(direction) = 'out'
+		)
+	`, models.DirectionOut, models.DirectionUnknown).Error; err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // ClearDevice is permanently disabled to ensure hardware logs are never cleared.
